@@ -1,0 +1,2064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hsbcadculator ROI</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <style>
+        *, *::before, *::after {
+            font-family: 'Open Sans', sans-serif;
+        }
+        body {
+            background: #FAFAFA;
+            color: #2A5429;
+            font-family: 'Open Sans', sans-serif;
+            min-height: 100vh;
+        }
+        .custom-green {
+            color: #2A5429;
+        }
+        .custom-bg-green {
+            background-color: #2A5429;
+        }
+        .custom-border-green {
+            border: 1px solid #2A5429;
+        }
+        .field-label {
+            color: #2A5429;
+            letter-spacing: 0.08em;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+        .page-header {
+            border-bottom: 1px solid rgba(42, 84, 41, 0.15);
+        }
+        .body-card {
+            background-color: #FFFFFF;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+        }
+        .card-title {
+            color: #2A5429;
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+        /* Green checkboxes */
+        input[type="checkbox"] {
+            accent-color: #2A5429;
+            cursor: pointer;
+        }
+        input[type="checkbox"]:checked {
+            background-color: #2A5429;
+            border-color: #2A5429;
+        }
+        .progress-track {
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #2A5429;
+            width: 0;
+            transition: width 0.25s ease;
+        }
+        .step-circle {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            border: 2px solid #cbd5e1;
+            background: #f8fafc;
+            color: #64748b;
+        }
+        .step-circle-active {
+            border-color: #2A5429;
+            background: #2A5429;
+            color: #ffffff;
+        }
+        .step-circle-complete {
+            border-color: #2A5429;
+            background: #dcfce7;
+            color: #2A5429;
+        }
+        .map-surface {
+            position: relative;
+            min-height: 520px;
+            background:
+                radial-gradient(circle at top left, rgba(42, 84, 41, 0.12), transparent 28%),
+                linear-gradient(180deg, #f7fcf7 0%, #edf6ed 100%);
+            overflow: hidden;
+        }
+        .map-node {
+            position: absolute;
+            width: 228px;
+            min-height: 94px;
+            border-radius: 16px;
+            border: 1px solid rgba(42, 84, 41, 0.2);
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: center;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            padding: 14px 16px;
+            text-align: left;
+            gap: 12px;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .map-node:active {
+            cursor: grabbing;
+        }
+        .map-node:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 22px 42px rgba(15, 23, 42, 0.16);
+        }
+        .map-node-selected {
+            box-shadow: 0 0 0 4px rgba(42, 84, 41, 0.18), 0 14px 28px rgba(15, 23, 42, 0.12);
+        }
+        .map-node-server {
+            background: linear-gradient(180deg, #f7fcf7 0%, #edf6ed 100%);
+        }
+        .map-node-office {
+            background: linear-gradient(180deg, #effcf4 0%, #e3f4e6 100%);
+        }
+        .map-node-client {
+            background: linear-gradient(180deg, #f7fcf7 0%, #edf6ed 100%);
+        }
+        .map-node-accent {
+            width: 58px;
+            height: 58px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .map-node-accent img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .map-node-copy {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .map-node-link-action {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(42, 84, 41, 0.2);
+            background: #ffffff;
+            color: #2A5429;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+            transform: translateY(4px);
+        }
+        .map-node:hover .map-node-link-action,
+        .map-node-selected .map-node-link-action {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        .map-link {
+            stroke: #2A5429;
+            stroke-width: 3;
+            stroke-dasharray: 10 8;
+            animation: flowLine 1.2s linear infinite;
+        }
+        .map-link-manual {
+            stroke: #2A5429;
+            stroke-dasharray: 8 6;
+            animation: flowLine 1s linear infinite;
+        }
+        @keyframes flowLine {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: -36; }
+        }
+        .theme-surface {
+            background: #ffffff;
+            border-color: rgba(42, 84, 41, 0.16) !important;
+        }
+        .side-menu {
+            position: fixed;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 56px;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: #ffffff;
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+            padding: 10px 6px;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .side-menu-btn {
+            position: relative;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            color: #2A5429;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .side-menu-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+        }
+        .side-menu-btn:hover {
+            background: #e8f3eb;
+            border-color: rgba(42, 84, 41, 0.25);
+        }
+        .side-menu-label {
+            position: absolute;
+            left: 52px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 10px;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: #2A5429;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+        .side-menu-btn:hover .side-menu-label {
+            opacity: 1;
+        }
+        .side-menu-popover {
+            position: absolute;
+            left: 58px;
+            top: 0;
+            width: 230px;
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 14px 24px rgba(15, 23, 42, 0.12);
+            display: none;
+            z-index: 40;
+        }
+        .side-menu-popover.visible {
+            display: block;
+        }
+        .menu-separator {
+            height: 1px;
+            background: rgba(15, 23, 42, 0.08);
+            margin: 6px 4px;
+        }
+        .green-copy {
+            color: #2A5429 !important;
+        }
+        .section-subtitle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #0f2444;
+            margin-bottom: 0.5rem;
+        }
+        .section-subtitle h2 {
+            color: #0f2444 !important;
+        }
+        .section-subtitle-icon {
+            width: 22px;
+            height: 22px;
+            color: #0f2444;
+            flex-shrink: 0;
+        }
+        .input-stack {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .subheading {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #2A5429;
+            border-top: 1px solid rgba(15, 36, 68, 0.12);
+            padding-top: 14px;
+            margin-top: 8px;
+        }
+        .subheading-copy {
+            font-size: 14px;
+            color: #57708f !important;
+            margin-bottom: 10px;
+        }
+        .cnc-types-card {
+            border: 1px solid rgba(15, 36, 68, 0.12);
+            border-radius: 14px;
+            padding: 14px;
+            background: #ffffff;
+        }
+        .selectable-option {
+            border: 1px solid #d5dde8;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 13px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: border-color 0.18s ease, background 0.18s ease;
+        }
+        .selectable-option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin: 0;
+        }
+        .selectable-option.selected-option {
+            border-color: #7ac17a;
+            background: #e9f6e9;
+        }
+        #view1 .rounded-xl,
+        #view2 .rounded-xl,
+        #view2 .rounded-2xl,
+        #view2 .rounded-\[1\.5rem\] {
+            background-color: #ffffff;
+        }
+        .input-page {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            border-radius: 0;
+            overflow: visible;
+        }
+        .input-subsection {
+            margin-left: 18px;
+            border-left: 2px solid rgba(42, 84, 41, 0.16);
+            padding-left: 16px;
+        }
+        .menu-check {
+            position: absolute;
+            top: -3px;
+            right: -3px;
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            border: 1px solid #9ca3af;
+            background: #ffffff;
+            color: transparent;
+            font-size: 10px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .side-menu-btn.complete .menu-check {
+            border-color: #2A5429;
+            background: #2A5429;
+            color: #ffffff;
+        }
+        .setup-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        .setup-node {
+            border: none;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 0;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .setup-node-icon {
+            width: 52px;
+            height: 52px;
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+        .map-zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 15;
+        }
+        .map-zoom-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            border: 1px solid rgba(42, 84, 41, 0.25);
+            background: #ffffff;
+            color: #2A5429;
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+        }
+        #view1 .text-slate-500,
+        #view1 .text-slate-600,
+        #view1 .text-slate-700,
+        #view1 .text-gray-600,
+        #view2 .text-slate-500,
+        #view2 .text-slate-600,
+        #view2 .text-slate-700,
+        #view2 .text-gray-600 {
+            color: #2A5429 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen relative">
+    <div id="view1" class="container mx-auto max-w-6xl px-6 py-8 relative">
+        <aside class="side-menu" aria-label="Input quick actions">
+            <button id="menuCompanyBtn" type="button" class="side-menu-btn" aria-label="Company"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 10.5 12 4l8 6.5"></path><path d="M6.5 9.5V20h11V9.5"></path></svg><span class="menu-check" aria-hidden="true">✓</span><span class="side-menu-label">Company</span></button>
+            <button id="menuPersonnelBtn" type="button" class="side-menu-btn" aria-label="Personnel"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="9" cy="8" r="3"></circle><path d="M4.5 19c0-2.8 2.1-5 4.5-5s4.5 2.2 4.5 5"></path><circle cx="17" cy="9" r="2"></circle><path d="M14.8 19c.1-1.9 1.3-3.5 3.2-4"></path></svg><span class="menu-check" aria-hidden="true">✓</span><span class="side-menu-label">Personnel</span></button>
+            <button id="menuProductionBtn" type="button" class="side-menu-btn" aria-label="Production"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 19V9"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path></svg><span class="menu-check" aria-hidden="true">✓</span><span class="side-menu-label">Production</span></button>
+            <button id="menuTimelineBtn" type="button" class="side-menu-btn" aria-label="Timeline"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v5l3 2"></path></svg><span class="menu-check" aria-hidden="true">✓</span><span class="side-menu-label">Timeline</span></button>
+            <button id="menuMarketBtnInput" type="button" class="side-menu-btn" aria-label="Market and currency"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.8 2.4 4.5 5.5 4.5 9s-1.7 6.6-4.5 9c-2.8-2.4-4.5-5.5-4.5-9s1.7-6.6 4.5-9Z"></path></svg><span class="side-menu-label">Market & currency</span></button>
+            <button id="menuInputResultsBtn" type="button" class="side-menu-btn hidden" aria-label="Results"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 19V9"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path></svg><span class="side-menu-label">Results</span></button>
+            <div id="menuMarketPopoverInput" class="side-menu-popover" role="dialog" aria-label="Market and currency input menu">
+                <label class="field-label mb-2 block">Market & currency</label>
+                <select id="countrySelect1" class="country-select w-full border border-gray-300 bg-gray-50 text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-[#2A5429] focus:ring-2 focus:ring-[#2A5429] focus:ring-opacity-20 outline-none hover:bg-white transition-colors">
+                    <option value="BE" data-currency="EUR" selected>🇧🇪 Belgium — EUR</option>
+                    <option value="DE" data-currency="EUR">🇩🇪 Germany — EUR</option>
+                    <option value="NL" data-currency="EUR">🇳🇱 The Netherlands — EUR</option>
+                    <option value="US" data-currency="USD">🇺🇸 United States — USD</option>
+                    <option value="EC" data-currency="USD">🇪🇨 Ecuador — USD</option>
+                    <option value="GB" data-currency="GBP">🇬🇧 United Kingdom — GBP</option>
+                    <option value="CA" data-currency="CAD">🇨🇦 Canada — CAD</option>
+                    <option value="AU" data-currency="AUD">🇦🇺 Australia — AUD</option>
+                    <option value="JP" data-currency="JPY">🇯🇵 Japan — JPY</option>
+                </select>
+            </div>
+        </aside>
+        <header class="page-header mb-10 pb-6">
+            <div class="flex flex-col items-start gap-4">
+                <div class="flex h-12 w-40 items-center justify-start">
+                    <img src="newlogo.png" alt="hsbMake logo" class="h-10 w-auto object-contain">
+                </div>
+                <h1 class="text-4xl font-bold" style="color: #0f2444;">hsbcadculator ROI</h1>
+            </div>
+        </header>
+        <div class="space-y-3">
+            <section id="section-card-company" class="input-page">
+                <div id="section-body-company" class="space-y-4">
+                    <div class="section-subtitle">
+                        <svg class="section-subtitle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10.5 12 4l8 6.5"></path><path d="M6.5 9.5V20h11V9.5"></path></svg>
+                        <h2 class="text-xl font-semibold custom-green">Company details</h2>
+                    </div>
+                    <h3 class="subheading mt-0">Basic Information</h3>
+                    <div class="input-stack input-subsection">
+                        <div>
+                            <label class="field-label mb-2 block">Company name *</label>
+                            <input type="text" class="w-full border border-gray-300 bg-gray-50 text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-[#2A5429] focus:ring-2 focus:ring-[#2A5429] focus:ring-opacity-20 outline-none hover:bg-white transition-colors" id="companyName" placeholder="Enter company name">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Annual revenue *</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-gray-300 bg-gray-50 text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-[#2A5429] focus:ring-2 focus:ring-[#2A5429] focus:ring-opacity-20 outline-none hover:bg-white transition-colors" id="companyRevenue" data-money="true" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Projects per year *</label>
+                            <input type="number" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="projectsPerYear" placeholder="e.g. 1500 elements/year">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Elements per project *</label>
+                            <input type="number" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="elementsPerProject">
+                        </div>
+                    </div>
+
+                    <h3 class="subheading">Production setup</h3>
+                    <div class="input-stack input-subsection">
+                        <div>
+                            <label class="field-label mb-2 block">Manual stations</label>
+                            <input type="number" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="manualStations">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">CNC machines</label>
+                            <input type="number" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="cncMachines">
+                        </div>
+                        <div id="cncMachineTypesContainer" class="cnc-types-card hidden">
+                            <h4 class="text-lg font-semibold custom-green mb-1">Specify CNC Machine Types</h4>
+                            <p class="subheading-copy mb-3">Tell us which machines you have for better configuration</p>
+                            <div id="cncMachineTypesList" class="space-y-3"></div>
+                        </div>
+                    </div>
+
+                    <h3 class="subheading">Products & Applications</h3>
+                    <p class="subheading-copy input-subsection">Select all types of products you manufacture</p>
+                    <div class="space-y-3 input-subsection">
+                        <label class="selectable-option"><input type="checkbox" name="productType" value="Elements"> <span>Elements</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="productType" value="SIP panels"> <span>SIP panels</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="productType" value="CLT panels"> <span>CLT panels</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="productType" value="Trusses"> <span>Trusses</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="productType" value="Multiwalls"> <span>Multiwalls</span></label>
+                    </div>
+
+                    <h4 class="text-xl font-semibold custom-green mt-4">Element Types (Optional)</h4>
+                    <p class="subheading-copy input-subsection">Select specific element types if applicable</p>
+                    <div class="space-y-3 input-subsection">
+                        <label class="selectable-option"><input type="checkbox" name="elementType" value="Walls"> <span>Walls</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="elementType" value="Roofs"> <span>Roofs</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="elementType" value="Floors"> <span>Floors</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="elementType" value="Custom"> <span>Custom</span></label>
+                        <label class="selectable-option"><input type="checkbox" name="elementType" id="otherCheckbox" value="Other"> <span>Other</span></label>
+                    </div>
+                    <input type="text" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none mt-2 hidden input-subsection" id="otherInput" placeholder="Specify other">
+                </div>
+            </section>
+
+            <section id="section-card-personnel" class="input-page hidden">
+                <div id="section-body-personnel" class="space-y-3">
+                    <div class="section-subtitle">
+                        <svg class="section-subtitle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"></circle><path d="M4.5 19c0-2.8 2.1-5 4.5-5s4.5 2.2 4.5 5"></path><circle cx="17" cy="9" r="2"></circle><path d="M14.8 19c.1-1.9 1.3-3.5 3.2-4"></path></svg>
+                        <h2 class="text-xl font-semibold custom-green">Personnel & time</h2>
+                    </div>
+                    <h3 class="subheading">Designers</h3>
+                    <div class="input-stack input-subsection">
+                        <div>
+                            <label class="field-label mb-2 block">Number of designers</label>
+                            <div class="relative">
+                                <input type="number" class="w-full pr-24 border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="numDesigners">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">designers</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Designer salary</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="designerSalary" data-money="true" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Hours to print</label>
+                            <div class="relative">
+                                <input type="number" class="w-full pr-16 border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="hoursToPrint">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">hours</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="subheading">Production</h3>
+                    <div class="input-stack input-subsection">
+                        <div>
+                            <label class="field-label mb-2 block">Number of production managers</label>
+                            <div class="relative">
+                                <input type="number" class="w-full pr-28 border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="numSupervisors">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">managers</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Production manager salary</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="supervisorSalary" data-money="true" placeholder="0">
+                        </div>
+                    </div>
+
+                    <h3 class="subheading">Operators</h3>
+                    <div class="input-stack input-subsection">
+                        <div>
+                            <label class="field-label mb-2 block">Number of operators</label>
+                            <div class="relative">
+                                <input type="number" class="w-full pr-24 border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="numOperators">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">operators</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Operator salary</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="operatorSalary" data-money="true" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Filing hours</label>
+                            <div class="relative">
+                                <input type="number" class="w-full pr-16 border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="filingTimeHours">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">hours</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-card-production" class="input-page hidden">
+                <div id="section-body-production" class="space-y-3">
+                    <div class="section-subtitle">
+                        <svg class="section-subtitle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 19V9"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path></svg>
+                        <h2 class="text-xl font-semibold custom-green">Production metrics</h2>
+                    </div>
+
+                    <h3 class="subheading">Paper</h3>
+                    <div class="input-stack input-subsection">
+                        <div>
+                            <label class="field-label mb-2 block">Prints per project</label>
+                            <div class="relative">
+                                <input type="number" class="w-full pr-20 border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="printsPerProject">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">prints</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Cost per print</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="costPerPrint" data-money="true" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Error rate (%)</label>
+                            <div class="relative">
+                                <input type="number" class="w-full pr-16 border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="errorRate">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Cost per error</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="costOfErrors" data-money="true" placeholder="0">
+                        </div>
+                    </div>
+
+                    <h3 class="subheading">Other costs</h3>
+                    <div class="input-stack input-subsection">
+                        <div>
+                            <label class="field-label mb-2 block">Cost of hardware</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="costHardware" data-money="true" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="field-label mb-2 block">Current server cost</label>
+                            <input type="text" inputmode="numeric" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="costCurrentServer" data-money="true" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-card-timeline" class="input-page hidden">
+                <div id="section-body-timeline" class="space-y-3">
+                    <div class="section-subtitle">
+                        <svg class="section-subtitle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v5l3 2"></path></svg>
+                        <h2 class="text-xl font-semibold custom-green">Timeline & action</h2>
+                    </div>
+                    <div class="input-subsection">
+                        <label class="field-label mb-2 block">Target go live date</label>
+                        <select class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none" id="goLiveDate">
+                            <option value="" selected hidden>Select a timeline</option>
+                            <option value="2 months">2 months</option>
+                            <option value="6 months">6 months</option>
+                            <option value="<12 months">&lt;12 months</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button id="prevStepBtn" type="button" class="w-full bg-[#2A5429] text-white border border-[#2A5429] font-semibold py-2 px-4 rounded-md text-sm hidden">← Back</button>
+            <button id="nextBtn" type="button" class="w-full bg-[#2A5429] text-white border border-[#2A5429] font-semibold py-2 px-4 rounded-md text-sm sm:col-start-2">Continue →</button>
+        </div>
+    </div>
+
+    <!-- View 2: Outputs & ROI -->
+    <div id="view2" class="container mx-auto max-w-6xl px-6 py-8 hidden relative">
+        <aside class="side-menu" aria-label="Results quick actions">
+            <button id="menuInputBtn" type="button" class="side-menu-btn" aria-label="Input"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 10.5 12 4l8 6.5"></path><path d="M6.5 9.5V20h11V9.5"></path></svg><span class="side-menu-label">Input</span></button>
+            <button id="menuResultsBtn" type="button" class="side-menu-btn" aria-label="Results"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 19V9"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path></svg><span class="side-menu-label">Results</span></button>
+            <button id="menuMapBtn" type="button" class="side-menu-btn" aria-label="Interactive map"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20V6.5Z"></path><path d="M9 4v13.5"></path><path d="M15 6.5V20"></path></svg><span class="side-menu-label">Interactive map</span></button>
+            <button id="menuMarketBtnResults" type="button" class="side-menu-btn" aria-label="Market and currency"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c2.8 2.4 4.5 5.5 4.5 9s-1.7 6.6-4.5 9c-2.8-2.4-4.5-5.5-4.5-9s1.7-6.6 4.5-9Z"></path></svg><span class="side-menu-label">Market & currency</span></button>
+            <div id="menuMarketPopoverResults" class="side-menu-popover" role="dialog" aria-label="Market and currency results menu">
+                <label class="field-label mb-2 block">Market & currency</label>
+                <select id="countrySelect2" class="country-select w-full border border-gray-300 bg-gray-50 text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-[#2A5429] focus:ring-2 focus:ring-[#2A5429] focus:ring-opacity-20 outline-none hover:bg-white transition-colors">
+                    <option value="BE" data-currency="EUR" selected>🇧🇪 Belgium — EUR</option>
+                    <option value="DE" data-currency="EUR">🇩🇪 Germany — EUR</option>
+                    <option value="NL" data-currency="EUR">🇳🇱 The Netherlands — EUR</option>
+                    <option value="US" data-currency="USD">🇺🇸 United States — USD</option>
+                    <option value="EC" data-currency="USD">🇪🇨 Ecuador — USD</option>
+                    <option value="GB" data-currency="GBP">🇬🇧 United Kingdom — GBP</option>
+                    <option value="CA" data-currency="CAD">🇨🇦 Canada — CAD</option>
+                    <option value="AU" data-currency="AUD">🇦🇺 Australia — AUD</option>
+                    <option value="JP" data-currency="JPY">🇯🇵 Japan — JPY</option>
+                </select>
+            </div>
+            <div class="menu-separator"></div>
+            <button id="menuPdfBtn" type="button" class="side-menu-btn" aria-label="Download PDF"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 4v11"></path><path d="m7.5 11.5 4.5 4.5 4.5-4.5"></path><path d="M5 20h14"></path></svg><span class="side-menu-label">Download PDF</span></button>
+            <button id="menuRecalculateBtn" type="button" class="side-menu-btn" aria-label="Reset"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6v5h-5"></path><path d="M4 18v-5h5"></path><path d="M7.5 8.5A7 7 0 0 1 19 11"></path><path d="M16.5 15.5A7 7 0 0 1 5 13"></path></svg><span class="side-menu-label">Reset</span></button>
+        </aside>
+        <header class="page-header mb-10 pb-6">
+            <div class="flex flex-col items-start gap-4">
+                <div class="flex h-12 w-40 items-center justify-start">
+                    <img src="newlogo.png" alt="hsbMake logo" class="h-10 w-auto object-contain">
+                </div>
+                <h1 class="text-4xl font-bold" style="color: #0f2444;">hsbcadculator ROI</h1>
+            </div>
+        </header>
+        <div id="resultsTopSection" class="p-0 mb-6">
+            <div class="setup-grid">
+                <label class="setup-node">
+                    <img src="server.png" alt="Server icon" class="setup-node-icon">
+                    <span class="map-node-copy">
+                        <span class="text-[11px] tracking-[0.14em] text-slate-500">hsbMake Server</span>
+                        <input id="resultServers" type="number" min="0" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-2xl font-bold custom-green bg-white" value="1">
+                    </span>
+                </label>
+                <label class="setup-node">
+                    <img src="office.png" alt="Office icon" class="setup-node-icon">
+                    <span class="map-node-copy">
+                        <span class="text-[11px] tracking-[0.14em] text-slate-500">hsbMake Office</span>
+                        <input id="resultOffices" type="number" min="0" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-2xl font-bold custom-green bg-white" value="0">
+                    </span>
+                </label>
+                <label class="setup-node">
+                    <img src="manual.png" alt="Client icon" class="setup-node-icon">
+                    <span class="map-node-copy">
+                        <span class="text-[11px] tracking-[0.14em] text-slate-500">hsbMake Client</span>
+                        <input id="resultClients" type="number" min="0" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-2xl font-bold custom-green bg-white" value="0">
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <div class="rounded-[1.5rem] bg-white p-5 border custom-border-green shadow-md mb-6 theme-surface">
+            <div class="flex flex-col gap-2 mb-4">
+                <h2 class="text-2xl font-bold custom-green">Break-even chart</h2>
+            </div>
+            <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3 min-h-[260px] h-72 mb-4 theme-surface">
+                <canvas id="breakEvenChart" class="w-full h-full"></canvas>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="rounded-3xl p-4 border border-[#2A5429] bg-[#2A5429]">
+                    <p class="text-xs tracking-[0.15em] text-white">3 year ROI projection</p>
+                    <p id="metricRoi3Year" class="mt-2 text-2xl font-semibold text-white">0%</p>
+                </div>
+                <div class="rounded-3xl p-4 border border-[#2A5429] bg-[#2A5429]">
+                    <p class="text-xs tracking-[0.15em] text-white">Net benefit - year 3</p>
+                    <p id="metricNetBenefitYear3" class="mt-2 text-2xl font-semibold text-white" data-currency-display="true" data-base-value="0">€0</p>
+                </div>
+                <div class="rounded-3xl p-4 border border-[#2A5429] bg-[#2A5429]">
+                    <p class="text-xs tracking-[0.15em] text-white">Payback period</p>
+                    <p id="metricPayback" class="mt-2 text-2xl font-semibold text-white">n/a</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="rounded-[1.5rem] bg-white p-5 border custom-border-green shadow-md theme-surface">
+                <h3 class="text-xl font-bold custom-green mb-2">Total savings</h3>
+                <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-3 min-h-[240px] h-64 theme-surface">
+                    <canvas id="savingsChart" class="w-full h-full"></canvas>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    <div>
+                        <label class="field-label mb-2 block">% saved with hsbMake</label>
+                        <div class="relative">
+                            <input id="savedPercent" type="number" min="0" max="100" value="50" class="w-full pr-12 border border-slate-300 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-[#2A5429] focus:ring-2 focus:ring-[#2A5429] focus:ring-opacity-20 outline-none">
+                            <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="field-label mb-2 block">Profit margin</label>
+                        <div class="relative">
+                            <input id="profitMarginPercent" type="number" min="0" max="100" value="20" class="w-full pr-12 border border-slate-300 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-[#2A5429] focus:ring-2 focus:ring-[#2A5429] focus:ring-opacity-20 outline-none">
+                            <span class="pointer-events-none absolute inset-y-0 right-4 inline-flex items-center text-slate-500 text-sm">%</span>
+                        </div>
+                        <p class="mt-2 text-sm font-semibold custom-green">Profit (year 3): <span id="savingsProfitValue" data-currency-display="true" data-base-value="0">€0</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-[1.5rem] bg-white p-5 border custom-border-green shadow-md theme-surface">
+                <h3 class="text-xl font-bold custom-green mb-4">Savings breakdown</h3>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 mb-4 theme-surface">
+                    <p class="text-xs tracking-[0.15em] text-slate-500 mb-3">Hard costs</p>
+                    <div class="space-y-2 text-slate-700">
+                        <div class="flex items-center justify-between"><span>Paper</span><span id="breakdownPaper" data-currency-display="true" data-base-value="0">€0</span></div>
+                        <div class="flex items-center justify-between"><span>Design Time</span><span id="breakdownDesignTime" data-currency-display="true" data-base-value="0">€0</span></div>
+                        <div class="flex items-center justify-between"><span>Errors</span><span id="breakdownErrors" data-currency-display="true" data-base-value="0">€0</span></div>
+                        <div class="flex items-center justify-between"><span>Productivity</span><span id="breakdownProductivity" data-currency-display="true" data-base-value="0">€0</span></div>
+                        <div class="flex items-center justify-between"><span>Regulatory Filing</span><span id="breakdownRegulatory" data-currency-display="true" data-base-value="0">€0</span></div>
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-200 font-bold custom-green"><span>Hard costs total</span><span id="breakdownHardTotal" data-currency-display="true" data-base-value="0">€0</span></div>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 theme-surface">
+                    <p class="text-xs tracking-[0.15em] text-slate-500 mb-3">Soft costs</p>
+                    <div class="flex items-center justify-between text-slate-700">
+                        <span>Factory Supervision</span>
+                        <span id="breakdownSupervision" data-currency-display="true" data-base-value="0">€0</span>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-200 font-bold custom-green">
+                        <span>Soft costs total</span>
+                        <span id="breakdownSoftTotal" data-currency-display="true" data-base-value="0">€0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="interactiveMapSection" class="rounded-[1.5rem] bg-white p-5 border custom-border-green shadow-md mb-6 theme-surface">
+            <div class="flex flex-col gap-2 mb-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h3 class="text-xl font-bold custom-green">Interactive production map</h3>
+                </div>
+            </div>
+            <div id="productionMap" class="map-surface rounded-[1.5rem] border border-slate-200">
+                <div class="map-zoom-controls">
+                    <button id="mapZoomOutBtn" type="button" class="map-zoom-btn" aria-label="Zoom out">−</button>
+                    <button id="mapZoomInBtn" type="button" class="map-zoom-btn" aria-label="Zoom in">+</button>
+                </div>
+                <svg id="mapLinks" class="absolute inset-0 h-full w-full pointer-events-none"></svg>
+                <div id="mapNodes" class="absolute inset-0"></div>
+            </div>
+        </div>
+
+        <div class="rounded-[1.5rem] bg-slate-50 p-6 text-center text-sm text-slate-500 theme-surface">
+            <p>Disclaimer: This is an estimate. Real numbers will differentiate depending on the market and the sales person.</p>
+            <p class="mt-2">© 2026 hsbcad. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const view1 = document.getElementById('view1');
+            const view2 = document.getElementById('view2');
+            const nextBtn = document.getElementById('nextBtn');
+            const prevStepBtn = document.getElementById('prevStepBtn');
+            const backBtn = document.getElementById('backBtn');
+            const menuInputResultsBtn = document.getElementById('menuInputResultsBtn');
+            const mapZoomInBtn = document.getElementById('mapZoomInBtn');
+            const mapZoomOutBtn = document.getElementById('mapZoomOutBtn');
+            const otherCheckbox = document.getElementById('otherCheckbox');
+            const otherInput = document.getElementById('otherInput');
+            const cncMachinesInput = document.getElementById('cncMachines');
+            const cncMachineTypesContainer = document.getElementById('cncMachineTypesContainer');
+            const cncMachineTypesList = document.getElementById('cncMachineTypesList');
+            const currencySelects = Array.from(document.querySelectorAll('.country-select'));
+            const moneyInputs = Array.from(document.querySelectorAll('[data-money]'));
+            const currencyDisplays = Array.from(document.querySelectorAll('[data-currency-display]'));
+
+            const currencyConfig = {
+                USD: { code: 'USD', locale: 'en-US' },
+                EUR: { code: 'EUR', locale: 'de-DE' },
+                GBP: { code: 'GBP', locale: 'en-GB' },
+                CAD: { code: 'CAD', locale: 'en-CA' },
+                AUD: { code: 'AUD', locale: 'en-AU' },
+                JPY: { code: 'JPY', locale: 'ja-JP' }
+            };
+
+            const exchangeRates = {
+                EUR: 1,
+                USD: 1.167,
+                GBP: 0.871,
+                CAD: 1.618,
+                AUD: 1.662,
+                JPY: 186.54
+            };
+
+            function getSelectedCurrency() {
+                const selected = currencySelects[0]?.selectedOptions[0];
+                const currency = selected?.dataset?.currency || 'EUR';
+                return currencyConfig[currency] || currencyConfig.EUR;
+            }
+
+            function parseCurrencyValue(value) {
+                const raw = String(value || '').replace(/[^0-9,.-]/g, '');
+                if (raw.trim() === '') return '';
+
+                const lastComma = raw.lastIndexOf(',');
+                const lastDot = raw.lastIndexOf('.');
+                    const dotCount = (raw.match(/\./g) || []).length;
+                let normalized = raw;
+
+                if (lastComma > lastDot) {
+                    normalized = raw.replace(/\./g, '').replace(',', '.');
+                } else if (lastDot > lastComma && lastComma !== -1) {
+                    normalized = raw.replace(/,/g, '');
+                } else if (lastDot !== -1 && lastComma === -1) {
+                        const fractionalDigits = raw.length - lastDot - 1;
+                        normalized = dotCount === 1 && fractionalDigits <= 2 ? raw : raw.replace(/\./g, '');
+                } else if (lastComma !== -1 && lastDot === -1) {
+                    normalized = raw.replace(',', '.');
+                }
+
+                const numeric = Number(normalized);
+                return Number.isNaN(numeric) ? '' : numeric;
+            }
+
+            function formatMoneyForTyping(value) {
+                let cleaned = String(value || '').replace(/[^0-9,.-]/g, '').replace(/-/g, '');
+                if (cleaned === '') return '';
+
+                    const dotCount = (cleaned.match(/\./g) || []).length;
+                    if (!cleaned.includes(',') && dotCount === 1) {
+                        const dotIndex = cleaned.indexOf('.');
+                        const fractionalDigits = cleaned.length - dotIndex - 1;
+                        if (fractionalDigits <= 2) {
+                            const integerPartRaw = cleaned.slice(0, dotIndex).replace(/\D/g, '') || '0';
+                            const decimalPartRaw = cleaned.slice(dotIndex + 1).replace(/\D/g, '').slice(0, 2);
+                            const groupedInteger = integerPartRaw.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                            return decimalPartRaw === '' ? (groupedInteger || '0') + '.' : (groupedInteger || '0') + '.' + decimalPartRaw;
+                        }
+                    }
+
+                const commaParts = cleaned.split(',');
+                let integerPart = commaParts[0].replace(/[.]/g, '');
+                let decimalPart = commaParts.length > 1 ? commaParts.slice(1).join('').replace(/[.,]/g, '') : '';
+
+                const allDigits = (integerPart + decimalPart).replace(/\D/g, '').slice(0, 22);
+                const integerDigitsTarget = Math.min(integerPart.replace(/\D/g, '').length, allDigits.length);
+                integerPart = allDigits.slice(0, integerDigitsTarget);
+                decimalPart = allDigits.slice(integerDigitsTarget, 22).slice(0, 2);
+
+                integerPart = integerPart.replace(/^0+(?=\d)/, '');
+                if (integerPart === '') integerPart = '0';
+
+                const groupedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                return decimalPart ? groupedInteger + ',' + decimalPart : groupedInteger;
+            }
+
+            function formatMoneyValue(value) {
+                const currency = getSelectedCurrency();
+                const number = Number(value);
+                if (Number.isNaN(number) || value === '') return '';
+                return new Intl.NumberFormat(currency.locale, {
+                    style: 'currency',
+                    currency: currency.code,
+                    maximumFractionDigits: 2
+                }).format(number);
+            }
+
+            function clearMoneyFormatting(input) {
+                const cleaned = parseCurrencyValue(input.value);
+                input.value = cleaned === '' ? '' : String(cleaned);
+            }
+
+            function formatMoneyInput(input) {
+                const raw = parseCurrencyValue(input.value);
+                input.value = raw === '' ? '' : formatMoneyValue(raw);
+            }
+
+            function convertCurrency(value, fromCurrency, toCurrency) {
+                if (!value || value === '' || isNaN(value)) return value;
+                const valueInEur = Number(value) / exchangeRates[fromCurrency];
+                const valueInTarget = valueInEur * exchangeRates[toCurrency];
+                return valueInTarget;
+            }
+
+            function syncCountrySelectors(changedSelect) {
+                // Get the old currency from a selector that hasn't been changed yet
+                const otherSelect = currencySelects.find(s => s !== changedSelect);
+                const oldCurrency = otherSelect?.selectedOptions[0]?.dataset?.currency || 'EUR';
+                const newCurrency = changedSelect.selectedOptions[0]?.dataset?.currency || 'EUR';
+
+                currencySelects.forEach(select => {
+                    if (select !== changedSelect) {
+                        select.value = changedSelect.value;
+                    }
+                });
+
+                if (oldCurrency !== newCurrency) {
+                    // Convert all currency values using stored base values
+                    moneyInputs.forEach(input => {
+                        let baseValue = parseFloat(input.dataset.baseValue);
+                        if (!baseValue || baseValue === 0 || isNaN(baseValue)) return;
+                        
+                        const convertedValue = convertCurrency(baseValue, oldCurrency, newCurrency);
+                        input.dataset.baseValue = convertedValue.toString();
+                        input.value = formatMoneyValue(convertedValue);
+                    });
+
+                    // Convert all display currency values
+                    currencyDisplays.forEach(display => {
+                        let baseValue = parseFloat(display.dataset.baseValue);
+                        if (!baseValue || baseValue === 0 || isNaN(baseValue)) return;
+                        
+                        const convertedValue = convertCurrency(baseValue, oldCurrency, newCurrency);
+                        const formatted = formatMoneyValue(convertedValue);
+                        
+                        // Preserve any text after the number (like " / year")
+                        const originalText = display.textContent;
+                        const hasYearSuffix = originalText.includes(' / year');
+                        
+                        display.textContent = hasYearSuffix ? formatted + ' / year' : formatted;
+                    });
+
+                    updateResults();
+                }
+            }
+
+            currencySelects.forEach(select => {
+                select.addEventListener('change', () => syncCountrySelectors(select));
+            });
+
+            moneyInputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    const raw = parseCurrencyValue(input.value);
+                    input.value = raw === '' ? '' : formatMoneyForTyping(String(raw).replace('.', ','));
+                });
+
+                input.addEventListener('input', () => {
+                    input.value = formatMoneyForTyping(input.value);
+                    const raw = parseCurrencyValue(input.value);
+                    if (raw !== '' && raw !== 0) {
+                        input.dataset.baseValue = raw.toString();
+                    }
+                    updateResults();
+                });
+
+                input.addEventListener('blur', () => {
+                    const raw = parseCurrencyValue(input.value);
+                    if (raw !== '' && raw !== 0) {
+                        input.dataset.baseValue = raw.toString();
+                    }
+                    input.value = raw === '' ? '' : formatMoneyValue(raw);
+                    updateResults();
+                });
+            });
+
+            const sections = [
+                {
+                    key: 'company',
+                    bodyId: 'section-body-company',
+                    inputs: ['#companyName', '#companyRevenue', '#projectsPerYear', '#elementsPerProject', '#manualStations', '#cncMachines'],
+                    checkboxGroups: ['input[name="productType"]']
+                },
+                {
+                    key: 'personnel',
+                    bodyId: 'section-body-personnel',
+                    inputs: ['#numDesigners', '#designerSalary', '#hoursToPrint', '#numSupervisors', '#supervisorSalary', '#operatorSalary', '#numOperators']
+                },
+                {
+                    key: 'production',
+                    bodyId: 'section-body-production',
+                    inputs: ['#printsPerProject', '#costPerPrint', '#errorRate', '#costOfErrors', '#costHardware', '#costCurrentServer']
+                },
+                {
+                    key: 'timeline',
+                    bodyId: 'section-body-timeline',
+                    inputs: ['#goLiveDate']
+                }
+            ];
+
+            let currentInputStep = 0;
+            let mapZoom = 1;
+
+            function getSectionByKey(key) {
+                return sections.find(section => section.key === key);
+            }
+
+            function hasCheckedGroup(selector) {
+                const nodes = document.querySelectorAll(selector);
+                return Array.from(nodes).some(input => input.checked);
+            }
+
+            function isInputValid(selector) {
+                const input = document.querySelector(selector);
+                if (!input) return false;
+                return String(input.value || '').trim() !== '';
+            }
+
+            function isSectionComplete(section) {
+                const basicValid = section.inputs.every(selector => isInputValid(selector));
+                const checkboxValid = section.checkboxGroups ? section.checkboxGroups.every(group => hasCheckedGroup(group)) : true;
+                return basicValid && checkboxValid;
+            }
+
+            function updateStatus(section) {
+                const complete = isSectionComplete(section);
+
+                const menuMap = {
+                    company: document.getElementById('menuCompanyBtn'),
+                    personnel: document.getElementById('menuPersonnelBtn'),
+                    production: document.getElementById('menuProductionBtn'),
+                    timeline: document.getElementById('menuTimelineBtn')
+                };
+                const menuBtn = menuMap[section.key];
+                if (menuBtn) {
+                    menuBtn.classList.toggle('complete', complete);
+                }
+            }
+
+            function allSectionsComplete() {
+                return sections.every(section => isSectionComplete(section));
+            }
+
+            function updateNextButtonState() {
+                nextBtn.disabled = false;
+                nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                nextBtn.classList.add('opacity-100');
+                nextBtn.textContent = currentInputStep === sections.length - 1 ? 'See results →' : 'Continue →';
+
+                const canSeeResults = allSectionsComplete();
+                menuInputResultsBtn?.classList.toggle('hidden', !canSeeResults);
+            }
+
+            function updateSectionCompletion(section) {
+                updateStatus(section);
+                updateNextButtonState();
+            }
+
+            function renderInputStep() {
+                sections.forEach((section, index) => {
+                    const card = document.getElementById('section-card-' + section.key);
+                    const body = document.getElementById(section.bodyId);
+                    const isCurrent = index === currentInputStep;
+                    if (card) card.classList.toggle('hidden', !isCurrent);
+                    if (body) body.classList.remove('hidden');
+                });
+
+                prevStepBtn.classList.toggle('hidden', currentInputStep === 0);
+                updateNextButtonState();
+            }
+
+            function attachSectionListeners() {
+                sections.forEach(section => {
+                    section.inputs.forEach(selector => {
+                        const input = document.querySelector(selector);
+                        if (!input) return;
+                        input.addEventListener('input', () => updateSectionCompletion(section));
+                        input.addEventListener('change', () => updateSectionCompletion(section));
+                    });
+
+                    if (section.checkboxGroups) {
+                        section.checkboxGroups.forEach(selector => {
+                            document.querySelectorAll(selector).forEach(input => {
+                                input.addEventListener('change', () => updateSectionCompletion(section));
+                            });
+                        });
+                    }
+                });
+            }
+
+            otherCheckbox?.addEventListener('change', () => {
+                if (otherCheckbox.checked) {
+                    otherInput.classList.remove('hidden');
+                } else {
+                    otherInput.classList.add('hidden');
+                }
+                updateSelectableCards();
+            });
+
+            document.querySelectorAll('.selectable-option input[type="checkbox"]').forEach(input => {
+                input.addEventListener('change', updateSelectableCards);
+            });
+
+            cncMachinesInput?.addEventListener('input', renderCncMachineTypeInputs);
+            cncMachinesInput?.addEventListener('change', renderCncMachineTypeInputs);
+
+            attachSectionListeners();
+            sections.forEach(updateStatus);
+            updateNextButtonState();
+            renderInputStep();
+            updateSelectableCards();
+            renderCncMachineTypeInputs();
+
+            const resultServersInput = document.getElementById('resultServers');
+            const resultOfficesInput = document.getElementById('resultOffices');
+            const resultClientsInput = document.getElementById('resultClients');
+            const savedPercentInput = document.getElementById('savedPercent');
+            const profitMarginPercentInput = document.getElementById('profitMarginPercent');
+            const savingsProfitValue = document.getElementById('savingsProfitValue');
+            const metricRoi3Year = document.getElementById('metricRoi3Year');
+            const metricNetBenefitYear3 = document.getElementById('metricNetBenefitYear3');
+            const metricPayback = document.getElementById('metricPayback');
+            const breakdownPaper = document.getElementById('breakdownPaper');
+            const breakdownDesignTime = document.getElementById('breakdownDesignTime');
+            const breakdownErrors = document.getElementById('breakdownErrors');
+            const breakdownProductivity = document.getElementById('breakdownProductivity');
+            const breakdownRegulatory = document.getElementById('breakdownRegulatory');
+            const breakdownSupervision = document.getElementById('breakdownSupervision');
+            const breakdownHardTotal = document.getElementById('breakdownHardTotal');
+            const breakdownSoftTotal = document.getElementById('breakdownSoftTotal');
+            const productionMap = document.getElementById('productionMap');
+            const mapLinks = document.getElementById('mapLinks');
+            const mapNodes = document.getElementById('mapNodes');
+            const menuInputBtn = document.getElementById('menuInputBtn');
+            const menuCompanyBtn = document.getElementById('menuCompanyBtn');
+            const menuPersonnelBtn = document.getElementById('menuPersonnelBtn');
+            const menuProductionBtn = document.getElementById('menuProductionBtn');
+            const menuTimelineBtn = document.getElementById('menuTimelineBtn');
+            const menuMarketBtnInput = document.getElementById('menuMarketBtnInput');
+            const menuMarketPopoverInput = document.getElementById('menuMarketPopoverInput');
+            const menuMarketBtnResults = document.getElementById('menuMarketBtnResults');
+            const menuMarketPopoverResults = document.getElementById('menuMarketPopoverResults');
+            const menuResultsBtn = document.getElementById('menuResultsBtn');
+            const menuMapBtn = document.getElementById('menuMapBtn');
+            const menuPdfBtn = document.getElementById('menuPdfBtn');
+            const menuRecalculateBtn = document.getElementById('menuRecalculateBtn');
+            const resultsTopSection = document.getElementById('resultsTopSection');
+            const interactiveMapSection = document.getElementById('interactiveMapSection');
+
+            let breakEvenChart;
+            let savingsChart;
+            let chartsInitialized = false;
+            let mapNodeState = [];
+            let manualMapLinks = [];
+            let selectedMapNodeId = null;
+            let previewConnectionPoint = null;
+
+            function renderCncMachineTypeInputs() {
+                const count = Math.max(0, parseNumberValue('#cncMachines'));
+                if (!cncMachineTypesContainer || !cncMachineTypesList) return;
+
+                if (count <= 0) {
+                    cncMachineTypesContainer.classList.add('hidden');
+                    cncMachineTypesList.innerHTML = '';
+                    return;
+                }
+
+                cncMachineTypesContainer.classList.remove('hidden');
+                cncMachineTypesList.innerHTML = Array.from({ length: count }).map((_, index) => `
+                    <div class="grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-3 items-center">
+                        <label class="text-slate-700 font-semibold">Machine ${index + 1}:</label>
+                        <input type="text" class="w-full border border-slate-200 bg-white text-slate-900 rounded-xl px-4 py-3 shadow-sm focus:border-[#2A5429] focus:ring-2 focus:ring-[#2A5429] focus:ring-opacity-20 outline-none" placeholder="e.g., Hundegger Speedcut, Weinmann Multifunction">
+                    </div>
+                `).join('');
+            }
+
+            function updateSelectableCards() {
+                document.querySelectorAll('.selectable-option').forEach(option => {
+                    const checkbox = option.querySelector('input[type="checkbox"]');
+                    option.classList.toggle('selected-option', Boolean(checkbox?.checked));
+                });
+            }
+
+            function getCurrencySymbol() {
+                const currency = getSelectedCurrency();
+                const parts = new Intl.NumberFormat(currency.locale, {
+                    style: 'currency',
+                    currency: currency.code,
+                    maximumFractionDigits: 0
+                }).formatToParts(0);
+                return parts.find(part => part.type === 'currency')?.value || currency.code;
+            }
+
+            function getAxisMoneyTitle() {
+                return `Money (${getCurrencySymbol()})`;
+            }
+
+            function getMapNodeIcon(type) {
+                if (type === 'server') {
+                    return '<img src="server.png" alt="Server" class="h-6 w-6 object-contain">';
+                }
+                if (type === 'office') {
+                    return '<img src="office.png" alt="Office" class="h-6 w-6 object-contain">';
+                }
+                if (type === 'client-manual') {
+                    return '<img src="manual.png" alt="Manual station" class="h-6 w-6 object-contain">';
+                }
+                return '<img src="CNC.png" alt="CNC machine" class="h-6 w-6 object-contain">';
+            }
+
+            function syncHsbSetupFromInputs() {
+                if (resultServersInput) resultServersInput.value = '1';
+                if (resultOfficesInput) resultOfficesInput.value = String(parseNumberValue('#numSupervisors'));
+                const totalClients = parseNumberValue('#manualStations') + parseNumberValue('#cncMachines');
+                if (resultClientsInput) resultClientsInput.value = String(totalClients);
+            }
+
+            function getMapDimensions() {
+                const rect = productionMap.getBoundingClientRect();
+                return {
+                    width: Math.max(320, rect.width || productionMap.clientWidth || 960),
+                    height: Math.max(420, rect.height || productionMap.clientHeight || 520)
+                };
+            }
+
+            function createDefaultNodePosition(type, index, total, width, height) {
+                const columns = {
+                    server: width * 0.17,
+                    office: width * 0.5,
+                    'client-manual': width * 0.79,
+                    'client-cnc': width * 0.88
+                };
+                const usableHeight = Math.max(120, height - 140);
+                const spacing = total > 1 ? usableHeight / (total - 1) : 0;
+                const top = 40 + (total > 1 ? spacing * index : usableHeight / 2);
+                return {
+                    x: columns[type] - 114,
+                    y: top
+                };
+            }
+
+            function syncProductionMapState() {
+                const counts = {
+                    server: Math.max(0, Number(resultServersInput?.value || 0)),
+                    office: Math.max(0, Number(resultOfficesInput?.value || 0)),
+                    clientManual: Math.max(0, parseNumberValue('#manualStations')),
+                    clientCnc: Math.max(0, parseNumberValue('#cncMachines'))
+                };
+                const { width, height } = getMapDimensions();
+                const existingPositions = new Map(mapNodeState.map(node => [node.id, { x: node.x, y: node.y }]));
+                const nextNodes = [];
+
+                [
+                    ['server', counts.server],
+                    ['office', counts.office],
+                    ['client-manual', counts.clientManual],
+                    ['client-cnc', counts.clientCnc]
+                ].forEach(([type, total]) => {
+                    for (let index = 0; index < total; index += 1) {
+                        const id = type + '-' + (index + 1);
+                        const saved = existingPositions.get(id);
+                        const fallback = createDefaultNodePosition(type, index, total, width, height);
+                        nextNodes.push({
+                            id,
+                            type,
+                            title: type === 'server' ? 'hsbMake Server' : type === 'office' ? 'hsbMake Office' : 'hsbMake Client',
+                            label: type === 'server' ? 'Server' : type === 'office' ? 'Office' : (type === 'client-manual' ? 'Manual station' : 'CNC machine'),
+                            x: saved ? saved.x : fallback.x,
+                            y: saved ? saved.y : fallback.y
+                        });
+                    }
+                });
+
+                mapNodeState = nextNodes.map(node => ({
+                    ...node,
+                    x: Math.min(Math.max(8, node.x), width - 236),
+                    y: Math.min(Math.max(8, node.y), height - 108)
+                }));
+
+                const validNodeIds = new Set(mapNodeState.map(node => node.id));
+                manualMapLinks = manualMapLinks.filter(link => validNodeIds.has(link.from) && validNodeIds.has(link.to));
+                if (selectedMapNodeId && !validNodeIds.has(selectedMapNodeId)) {
+                    selectedMapNodeId = null;
+                    previewConnectionPoint = null;
+                }
+            }
+
+            function getNodeCenter(node) {
+                return { x: node.x + 114, y: node.y + 47 };
+            }
+
+            function drawProductionMapLinks() {
+                if (!productionMap || !mapLinks) return;
+                const allLinks = manualMapLinks.map(link => ({ ...link, manual: true }));
+                const nodeById = new Map(mapNodeState.map(node => [node.id, node]));
+                mapLinks.setAttribute('viewBox', `0 0 ${getMapDimensions().width} ${getMapDimensions().height}`);
+                mapLinks.innerHTML = `
+                    <defs>
+                        <marker id="mapArrowHead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                            <path d="M0,0 L10,5 L0,10 z" fill="#2A5429"></path>
+                        </marker>
+                    </defs>
+                ` + allLinks.map(link => {
+                    const fromNode = nodeById.get(link.from);
+                    const toNode = nodeById.get(link.to);
+                    if (!fromNode || !toNode) return '';
+                    const from = getNodeCenter(fromNode);
+                    const to = getNodeCenter(toNode);
+                    const controlOffset = Math.abs(to.x - from.x) * 0.35;
+                        return `<path class="map-link${link.manual ? ' map-link-manual' : ''}" marker-end="url(#mapArrowHead)" d="M ${from.x} ${from.y} C ${from.x + controlOffset} ${from.y}, ${to.x - controlOffset} ${to.y}, ${to.x} ${to.y}" fill="none"></path>`;
+                }).join('');
+
+                if (selectedMapNodeId && previewConnectionPoint) {
+                    const fromNode = nodeById.get(selectedMapNodeId);
+                    if (fromNode) {
+                        const from = getNodeCenter(fromNode);
+                        const to = previewConnectionPoint;
+                        const controlOffset = Math.abs(to.x - from.x) * 0.35;
+                        mapLinks.innerHTML += `<path class="map-link" marker-end="url(#mapArrowHead)" d="M ${from.x} ${from.y} C ${from.x + controlOffset} ${from.y}, ${to.x - controlOffset} ${to.y}, ${to.x} ${to.y}" fill="none" opacity="0.9"></path>`;
+                    }
+                }
+            }
+
+            function renderProductionMap() {
+                if (!productionMap || !mapNodes || !mapLinks) return;
+
+                mapNodes.style.transform = `scale(${mapZoom})`;
+                mapNodes.style.transformOrigin = 'top left';
+                mapLinks.style.transform = `scale(${mapZoom})`;
+                mapLinks.style.transformOrigin = 'top left';
+
+                syncProductionMapState();
+                drawProductionMapLinks();
+
+                mapNodes.innerHTML = '';
+                mapNodeState.forEach(node => {
+                    const nodeElement = document.createElement('button');
+                    nodeElement.type = 'button';
+                    nodeElement.className = `map-node map-node-${node.type}${selectedMapNodeId === node.id ? ' map-node-selected' : ''}`;
+                    nodeElement.style.left = `${node.x}px`;
+                    nodeElement.style.top = `${node.y}px`;
+                    nodeElement.dataset.nodeId = node.id;
+                    nodeElement.innerHTML = `
+                        <span class="map-node-accent">${getMapNodeIcon(node.type)}</span>
+                        <span class="map-node-copy">
+                            <span class="text-[11px] tracking-[0.14em] text-slate-500">${node.title}</span>
+                            <span class="mt-1 text-base font-bold custom-green">${node.label}</span>
+                        </span>
+                    `;
+                    attachMapNodeEvents(nodeElement, node.id);
+                    mapNodes.appendChild(nodeElement);
+                });
+            }
+
+            function attachMapNodeEvents(nodeElement, nodeId) {
+                let dragOffsetX = 0;
+                let dragOffsetY = 0;
+                let moved = false;
+
+                nodeElement.addEventListener('pointerdown', event => {
+                    event.preventDefault();
+                    const node = mapNodeState.find(item => item.id === nodeId);
+                    if (!node) return;
+                    const rect = productionMap.getBoundingClientRect();
+                    dragOffsetX = event.clientX - rect.left - node.x;
+                    dragOffsetY = event.clientY - rect.top - node.y;
+                    moved = false;
+                    nodeElement.setPointerCapture(event.pointerId);
+                });
+
+                nodeElement.addEventListener('pointermove', event => {
+                    if (!nodeElement.hasPointerCapture(event.pointerId)) return;
+                    const node = mapNodeState.find(item => item.id === nodeId);
+                    if (!node) return;
+                    moved = true;
+                    const rect = productionMap.getBoundingClientRect();
+                    const width = rect.width || 960;
+                    const height = rect.height || 520;
+                    node.x = Math.min(Math.max(8, event.clientX - rect.left - dragOffsetX), width - 236);
+                    node.y = Math.min(Math.max(8, event.clientY - rect.top - dragOffsetY), height - 108);
+                    nodeElement.style.left = `${node.x}px`;
+                    nodeElement.style.top = `${node.y}px`;
+                    drawProductionMapLinks();
+                });
+
+                nodeElement.addEventListener('pointerup', event => {
+                    if (nodeElement.hasPointerCapture(event.pointerId)) {
+                        nodeElement.releasePointerCapture(event.pointerId);
+                    }
+                    if (!moved) {
+                        if (selectedMapNodeId && selectedMapNodeId !== nodeId) {
+                            const exists = manualMapLinks.some(link => (
+                                (link.from === selectedMapNodeId && link.to === nodeId) ||
+                                (link.from === nodeId && link.to === selectedMapNodeId)
+                            ));
+                            if (!exists) {
+                                manualMapLinks.push({ from: selectedMapNodeId, to: nodeId });
+                            }
+                            selectedMapNodeId = null;
+                            previewConnectionPoint = null;
+                        } else {
+                            selectedMapNodeId = selectedMapNodeId === nodeId ? null : nodeId;
+                            previewConnectionPoint = selectedMapNodeId ? getNodeCenter(mapNodeState.find(item => item.id === nodeId)) : null;
+                        }
+                        renderProductionMap();
+                    }
+                });
+            }
+
+            function getInputSummary() {
+                return [
+                    ['Company name', document.getElementById('companyName')?.value || ''],
+                    ['Annual revenue', document.getElementById('companyRevenue')?.value || ''],
+                    ['Projects per year', document.getElementById('projectsPerYear')?.value || ''],
+                    ['Elements per project', document.getElementById('elementsPerProject')?.value || ''],
+                    ['Manual stations', document.getElementById('manualStations')?.value || ''],
+                    ['CNC machines', document.getElementById('cncMachines')?.value || ''],
+                    ['Production managers', document.getElementById('numSupervisors')?.value || ''],
+                    ['Designers', document.getElementById('numDesigners')?.value || ''],
+                    ['Operators', document.getElementById('numOperators')?.value || ''],
+                    ['Go live date', document.getElementById('goLiveDate')?.value || '']
+                ];
+            }
+
+                function loadImageDataUrl(src) {
+                    return new Promise((resolve, reject) => {
+                        const image = new Image();
+                        image.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = image.naturalWidth;
+                            canvas.height = image.naturalHeight;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(image, 0, 0);
+                            resolve(canvas.toDataURL('image/png'));
+                        };
+                        image.onerror = reject;
+                        image.src = src;
+                    });
+                }
+
+            async function downloadPdfReport() {
+                if (!window.jspdf || !window.html2canvas) return;
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+                const model = buildModel();
+                const inputs = getInputSummary();
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    let cursorY = 36;
+                    let logoDataUrl = null;
+
+                    try {
+                        logoDataUrl = await loadImageDataUrl('newlogo.png');
+                    } catch {}
+
+                    pdf.setFillColor(42, 84, 41);
+                    pdf.rect(0, 0, pageWidth, 92, 'F');
+                    if (logoDataUrl) {
+                        pdf.addImage(logoDataUrl, 'PNG', 40, 26, 110, 28);
+                    }
+                    pdf.setTextColor(255, 255, 255);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(22);
+                    pdf.text('ROI report', 40, 76);
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.text('Generated from the hsbcadculator ROI', pageWidth - 190, 76);
+
+                    cursorY = 122;
+                    pdf.setTextColor(42, 84, 41);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(15);
+                    pdf.text('Executive summary', 40, cursorY);
+                    cursorY += 18;
+
+                    const cards = [
+                        ['3 year ROI', metricRoi3Year.textContent],
+                        ['Net benefit year 3', metricNetBenefitYear3.textContent],
+                        ['Payback period', metricPayback.textContent]
+                    ];
+                    cards.forEach((card, index) => {
+                        const x = 40 + (index * 175);
+                        pdf.setFillColor(237, 246, 237);
+                        pdf.roundedRect(x, cursorY, 155, 66, 14, 14, 'F');
+                        pdf.setFontSize(10);
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.text(card[0], x + 14, cursorY + 22);
+                        pdf.setFontSize(18);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.text(card[1], x + 14, cursorY + 48);
+                    });
+
+                    cursorY += 96;
+                    pdf.setFontSize(15);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text('Inputs', 40, cursorY);
+                    cursorY += 14;
+                    pdf.setFillColor(248, 250, 252);
+                    pdf.roundedRect(40, cursorY, pageWidth - 80, 182, 14, 14, 'F');
+                    cursorY += 22;
+                    pdf.setFontSize(10);
+                    pdf.setFont('helvetica', 'normal');
+                    inputs.forEach(([label, value], index) => {
+                        const x = index < 5 ? 54 : 305;
+                        const y = cursorY + ((index % 5) * 28);
+                        pdf.setTextColor(71, 85, 105);
+                        pdf.text(label, x, y);
+                        pdf.setTextColor(42, 84, 41);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.text(String(value || '-'), x, y + 14);
+                        pdf.setFont('helvetica', 'normal');
+                    });
+
+                    cursorY += 168;
+                    pdf.setFontSize(15);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(42, 84, 41);
+                    pdf.text('Savings breakdown', 40, cursorY);
+                    cursorY += 14;
+                    pdf.setFillColor(248, 250, 252);
+                    pdf.roundedRect(40, cursorY, pageWidth - 80, 148, 14, 14, 'F');
+                    cursorY += 22;
+
+                    [
+                        ['Paper', formatMoneyValue(model.breakdown.paper)],
+                        ['Design time', formatMoneyValue(model.breakdown.designTime)],
+                        ['Errors', formatMoneyValue(model.breakdown.errors)],
+                        ['Productivity', formatMoneyValue(model.breakdown.productivity)],
+                        ['Regulatory filing', formatMoneyValue(model.breakdown.regulatory)],
+                        ['Hard costs total', formatMoneyValue(model.breakdown.hardTotal)],
+                        ['Factory supervision', formatMoneyValue(model.breakdown.supervision)],
+                        ['Soft costs total', formatMoneyValue(model.breakdown.softTotal)]
+                    ].forEach(([label, value], index) => {
+                        const x = index < 4 ? 54 : 305;
+                        const y = cursorY + ((index % 4) * 28);
+                        pdf.setTextColor(71, 85, 105);
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.text(label, x, y);
+                        pdf.setTextColor(42, 84, 41);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.text(value, x, y + 14);
+                    });
+
+                const canvas = await html2canvas(productionMap, { backgroundColor: '#ffffff', scale: 2 });
+                const imageData = canvas.toDataURL('image/png');
+                pdf.addPage();
+                    pdf.setFillColor(42, 84, 41);
+                    pdf.rect(0, 0, pageWidth, 76, 'F');
+                    if (logoDataUrl) {
+                        pdf.addImage(logoDataUrl, 'PNG', 40, 22, 110, 28);
+                    }
+                pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(18);
+                    pdf.setTextColor(255, 255, 255);
+                    pdf.text('Interactive production map snapshot', 40, 62);
+                    const imageWidth = pageWidth - 80;
+                    const imageHeight = (canvas.height * imageWidth) / canvas.width;
+                    pdf.addImage(imageData, 'PNG', 40, 98, imageWidth, Math.min(imageHeight, pdf.internal.pageSize.getHeight() - 150));
+                pdf.save('hsbcad-roi-report.pdf');
+            }
+
+            function parseNumberValue(selector) {
+                const input = document.querySelector(selector);
+                if (!input) return 0;
+                if (input.hasAttribute('data-money')) {
+                    const parsed = Number(parseCurrencyValue(input.value));
+                    return Number.isNaN(parsed) ? 0 : parsed;
+                }
+                const parsed = Number(input.value);
+                return Number.isNaN(parsed) ? 0 : parsed;
+            }
+
+            function setCurrencyDisplay(element, value) {
+                if (!element) return;
+                element.dataset.baseValue = String(value);
+                element.textContent = formatMoneyValue(value);
+            }
+
+            function buildModel() {
+                const projectsPerYear = parseNumberValue('#projectsPerYear');
+                const manualStations = parseNumberValue('#manualStations');
+                const numSupervisors = parseNumberValue('#numSupervisors');
+                const numDesigners = parseNumberValue('#numDesigners');
+                const numOperators = parseNumberValue('#numOperators');
+                const printsPerProject = parseNumberValue('#printsPerProject');
+                const costPerPrint = parseNumberValue('#costPerPrint');
+                const errorRate = parseNumberValue('#errorRate') / 100;
+                const costOfErrors = parseNumberValue('#costOfErrors');
+                const costHardware = parseNumberValue('#costHardware');
+                const costCurrentServer = parseNumberValue('#costCurrentServer');
+                const designerSalary = parseNumberValue('#designerSalary');
+                const supervisorSalary = parseNumberValue('#supervisorSalary');
+                const operatorSalary = parseNumberValue('#operatorSalary');
+                const filingTimeHours = parseNumberValue('#filingTimeHours');
+
+                const servers = Math.max(0, Number(resultServersInput?.value || 0));
+                const offices = Math.max(0, Number(resultOfficesInput?.value || 0));
+                const clients = Math.max(0, Number(resultClientsInput?.value || 0));
+
+                const savedPercentRaw = savedPercentInput?.value ?? '50';
+                const profitMarginRaw = profitMarginPercentInput?.value ?? '20';
+                const savedPercent = savedPercentRaw === '' ? 50 : Math.max(0, Math.min(100, Number(savedPercentRaw) || 0));
+                const profitMarginPercent = profitMarginRaw === '' ? 20 : Math.max(0, Math.min(100, Number(profitMarginRaw) || 0));
+                const savingsFactor = savedPercent / 100;
+
+                const paper = printsPerProject * projectsPerYear * costPerPrint * 0.7 * savingsFactor;
+                const designTime = numDesigners * designerSalary * 0.1 * savingsFactor;
+                const errors = projectsPerYear * costOfErrors * Math.max(errorRate, 0) * 0.35 * savingsFactor;
+                const productivity = numOperators * operatorSalary * 0.08 * savingsFactor;
+                const regulatory = filingTimeHours * projectsPerYear * ((supervisorSalary / 1920) || 0) * 0.75 * savingsFactor;
+                const supervision = numSupervisors * supervisorSalary * 0.12 * savingsFactor;
+                    const hardTotal = paper + designTime + errors + productivity + regulatory;
+                    const softTotal = supervision;
+
+                const annualSavings = paper + designTime + errors + productivity + regulatory + supervision;
+
+                const setupCost = costHardware + costCurrentServer + (servers * 9000) + (offices * 1800) + (clients * 350);
+                const recurringCostYear1 = (servers * 1500) + (offices * 400) + (clients * 120) + (manualStations * 30);
+                const inflationRate = 0.03;
+
+                const years = [0, 1, 2, 3];
+                const cumulativeBenefits = [0];
+                const cumulativeCosts = [setupCost];
+                const cumulativeSavingsLinear = [0];
+
+                let totalBenefit = 0;
+                let totalCost = setupCost;
+
+                for (let year = 1; year <= 3; year += 1) {
+                    const inflationFactor = Math.pow(1 + inflationRate, year - 1);
+                    const yearlyBenefit = annualSavings * inflationFactor;
+                    const yearlyRecurringCost = recurringCostYear1 * inflationFactor;
+                    totalBenefit += yearlyBenefit;
+                    totalCost += yearlyRecurringCost;
+                    cumulativeBenefits.push(totalBenefit);
+                    cumulativeCosts.push(totalCost);
+                    cumulativeSavingsLinear.push(annualSavings * year);
+                }
+
+                const benefitYear3 = cumulativeBenefits[3];
+                const costYear3 = cumulativeCosts[3];
+                const netBenefitYear3 = benefitYear3 - costYear3;
+                const profitYear3 = benefitYear3 * (profitMarginPercent / 100);
+                const roi3Year = costYear3 > 0 ? ((benefitYear3 - costYear3) / costYear3) * 100 : 0;
+
+                let paybackPeriod = 'n/a';
+                for (let i = 1; i < years.length; i += 1) {
+                    const prevDelta = cumulativeBenefits[i - 1] - cumulativeCosts[i - 1];
+                    const currDelta = cumulativeBenefits[i] - cumulativeCosts[i];
+                    if (currDelta >= 0) {
+                        const span = currDelta - prevDelta;
+                        const fraction = span !== 0 ? (0 - prevDelta) / span : 0;
+                        const exactYear = (i - 1) + Math.max(0, Math.min(1, fraction));
+                        paybackPeriod = exactYear.toFixed(1) + ' years';
+                        break;
+                    }
+                }
+
+                return {
+                    years,
+                    cumulativeBenefits,
+                    cumulativeCosts,
+                    cumulativeSavingsLinear,
+                    roi3Year,
+                    netBenefitYear3,
+                    profitYear3,
+                    paybackPeriod,
+                    breakdown: {
+                        paper,
+                        designTime,
+                        errors,
+                        productivity,
+                        regulatory,
+                        supervision,
+                        hardTotal,
+                        softTotal
+                    }
+                };
+            }
+
+            function updateResults() {
+                const model = buildModel();
+
+                metricRoi3Year.textContent = model.roi3Year.toFixed(1) + '%';
+                setCurrencyDisplay(metricNetBenefitYear3, model.netBenefitYear3);
+                metricPayback.textContent = model.paybackPeriod;
+                setCurrencyDisplay(savingsProfitValue, model.profitYear3);
+
+                setCurrencyDisplay(breakdownPaper, model.breakdown.paper);
+                setCurrencyDisplay(breakdownDesignTime, model.breakdown.designTime);
+                setCurrencyDisplay(breakdownErrors, model.breakdown.errors);
+                setCurrencyDisplay(breakdownProductivity, model.breakdown.productivity);
+                setCurrencyDisplay(breakdownRegulatory, model.breakdown.regulatory);
+                setCurrencyDisplay(breakdownSupervision, model.breakdown.supervision);
+                if (breakdownHardTotal) setCurrencyDisplay(breakdownHardTotal, model.breakdown.hardTotal);
+                if (breakdownSoftTotal) setCurrencyDisplay(breakdownSoftTotal, model.breakdown.softTotal);
+                renderProductionMap();
+
+                if (chartsInitialized) {
+                    breakEvenChart.options.scales.y.title.text = getAxisMoneyTitle();
+                    breakEvenChart.data.labels = model.years;
+                    breakEvenChart.data.datasets[0].data = model.cumulativeBenefits;
+                    breakEvenChart.data.datasets[1].data = model.cumulativeCosts;
+                    breakEvenChart.update();
+
+                    savingsChart.options.scales.y.title.text = getAxisMoneyTitle();
+                    savingsChart.data.labels = model.years;
+                    savingsChart.data.datasets[0].data = model.cumulativeSavingsLinear;
+                    savingsChart.update();
+                }
+            }
+
+            function initCharts() {
+                const model = buildModel();
+                const breakEvenCtx = document.getElementById('breakEvenChart').getContext('2d');
+                const savingsCtx = document.getElementById('savingsChart').getContext('2d');
+
+                breakEvenChart = new Chart(breakEvenCtx, {
+                    type: 'line',
+                    data: {
+                        labels: model.years,
+                        datasets: [
+                            {
+                                label: 'Break-even value',
+                                data: model.cumulativeBenefits,
+                                borderColor: '#2A5429',
+                                backgroundColor: 'rgba(22, 163, 74, 0.92)',
+                                tension: 0,
+                                fill: '-1',
+                                pointRadius: 0,
+                                borderWidth: 2,
+                            },
+                            {
+                                label: 'Baseline cost',
+                                data: model.cumulativeCosts,
+                                borderColor: 'rgba(100, 116, 139, 0.75)',
+                                backgroundColor: 'rgba(148, 163, 184, 0.08)',
+                                tension: 0,
+                                fill: false,
+                                pointRadius: 0,
+                                borderWidth: 2,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { color: '#334155' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Time (years)', color: '#334155', font: { weight: '600' } },
+                                ticks: { color: '#2A5429' },
+                                grid: { color: 'rgba(148, 163, 184, 0.18)', borderDash: [3, 5] }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: getAxisMoneyTitle(), color: '#334155', font: { weight: '600' } },
+                                ticks: {
+                                    color: '#2A5429',
+                                    callback: function(value) {
+                                        return formatMoneyValue(value);
+                                    }
+                                },
+                                grid: { color: 'rgba(148, 163, 184, 0.18)', borderDash: [3, 5] }
+                            }
+                        }
+                    }
+                });
+
+                savingsChart = new Chart(savingsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: model.years,
+                        datasets: [{
+                            label: 'Total savings',
+                            data: model.cumulativeSavingsLinear,
+                            borderColor: '#2A5429',
+                            backgroundColor: 'rgba(42, 84, 41, 0.1)',
+                            tension: 0,
+                            fill: false,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Time (years)', color: '#334155', font: { weight: '600' } },
+                                ticks: {
+                                    color: '#475569'
+                                },
+                                grid: { color: 'rgba(148, 163, 184, 0.15)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: getAxisMoneyTitle(), color: '#334155', font: { weight: '600' } },
+                                ticks: {
+                                    color: '#475569',
+                                    callback: function(value) {
+                                        return formatMoneyValue(value);
+                                    }
+                                },
+                                grid: { color: 'rgba(148, 163, 184, 0.15)' }
+                            }
+                        }
+                    }
+                });
+
+                chartsInitialized = true;
+                updateResults();
+            }
+
+            function resizeCharts() {
+                if (!chartsInitialized) return;
+                breakEvenChart.resize();
+                savingsChart.resize();
+                breakEvenChart.update();
+                savingsChart.update();
+            }
+
+            nextBtn.type = 'button';
+            if (backBtn) backBtn.type = 'button';
+
+            nextBtn.addEventListener('click', () => {
+                if (currentInputStep < sections.length - 1) {
+                    currentInputStep += 1;
+                    renderInputStep();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return;
+                }
+
+                syncHsbSetupFromInputs();
+
+                view1.classList.add('hidden');
+                view2.classList.remove('hidden');
+                if (!chartsInitialized) {
+                    initCharts();
+                }
+                updateResults();
+                setTimeout(resizeCharts, 200);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            prevStepBtn.addEventListener('click', () => {
+                if (currentInputStep > 0) {
+                    currentInputStep -= 1;
+                    renderInputStep();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+
+            backBtn?.addEventListener('click', () => {
+                view2.classList.add('hidden');
+                view1.classList.remove('hidden');
+                currentInputStep = sections.length - 1;
+                renderInputStep();
+            });
+
+            menuRecalculateBtn?.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                window.location.reload();
+            });
+
+            menuPdfBtn?.addEventListener('click', async () => {
+                menuPdfBtn.disabled = true;
+                try {
+                    await downloadPdfReport();
+                } finally {
+                    menuPdfBtn.disabled = false;
+                }
+            });
+
+            menuInputBtn?.addEventListener('click', () => {
+                view2.classList.add('hidden');
+                view1.classList.remove('hidden');
+                currentInputStep = sections.length - 1;
+                renderInputStep();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            menuInputResultsBtn?.addEventListener('click', () => {
+                if (!allSectionsComplete()) return;
+                syncHsbSetupFromInputs();
+                view1.classList.add('hidden');
+                view2.classList.remove('hidden');
+                if (!chartsInitialized) {
+                    initCharts();
+                }
+                updateResults();
+                setTimeout(resizeCharts, 200);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            menuResultsBtn?.addEventListener('click', () => {
+                resultsTopSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
+            menuMapBtn?.addEventListener('click', () => {
+                interactiveMapSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
+            menuCompanyBtn?.addEventListener('click', () => {
+                currentInputStep = 0;
+                renderInputStep();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            menuPersonnelBtn?.addEventListener('click', () => {
+                currentInputStep = 1;
+                renderInputStep();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            menuProductionBtn?.addEventListener('click', () => {
+                currentInputStep = 2;
+                renderInputStep();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            menuTimelineBtn?.addEventListener('click', () => {
+                currentInputStep = 3;
+                renderInputStep();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            mapZoomInBtn?.addEventListener('click', () => {
+                mapZoom = Math.min(2, Number((mapZoom + 0.1).toFixed(2)));
+                renderProductionMap();
+            });
+
+            mapZoomOutBtn?.addEventListener('click', () => {
+                mapZoom = Math.max(0.6, Number((mapZoom - 0.1).toFixed(2)));
+                renderProductionMap();
+            });
+
+            menuMarketBtnInput?.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                menuMarketPopoverInput?.classList.toggle('visible');
+                menuMarketPopoverResults?.classList.remove('visible');
+            });
+
+            menuMarketBtnResults?.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                menuMarketPopoverResults?.classList.toggle('visible');
+                menuMarketPopoverInput?.classList.remove('visible');
+            });
+
+            document.addEventListener('click', () => {
+                menuMarketPopoverInput?.classList.remove('visible');
+                menuMarketPopoverResults?.classList.remove('visible');
+            });
+
+            menuMarketPopoverInput?.addEventListener('click', event => event.stopPropagation());
+            menuMarketPopoverResults?.addEventListener('click', event => event.stopPropagation());
+
+            productionMap?.addEventListener('pointermove', event => {
+                if (!selectedMapNodeId) return;
+                const rect = productionMap.getBoundingClientRect();
+                previewConnectionPoint = {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+                drawProductionMapLinks();
+            });
+
+            productionMap?.addEventListener('pointerleave', () => {
+                if (!selectedMapNodeId) return;
+                previewConnectionPoint = getNodeCenter(mapNodeState.find(node => node.id === selectedMapNodeId));
+                drawProductionMapLinks();
+            });
+
+            ['input', 'change'].forEach(eventName => {
+                [
+                    '#projectsPerYear', '#manualStations', '#cncMachines', '#numSupervisors', '#numDesigners', '#numOperators',
+                    '#printsPerProject', '#costPerPrint', '#errorRate', '#costOfErrors', '#costHardware',
+                    '#costCurrentServer', '#designerSalary', '#supervisorSalary', '#operatorSalary', '#filingTimeHours',
+                    '#savedPercent', '#profitMarginPercent'
+                ].forEach(selector => {
+                    const node = document.querySelector(selector);
+                    node?.addEventListener(eventName, updateResults);
+                });
+            });
+
+            [resultServersInput, resultOfficesInput, resultClientsInput].forEach(input => {
+                input?.addEventListener('input', updateResults);
+            });
+
+            window.addEventListener('resize', () => {
+                renderProductionMap();
+            });
+
+            Chart.defaults.font.family = 'Open Sans';
+            sections.forEach(updateStatus);
+            updateNextButtonState();
+        });
+    </script>
+</body>
+</html>
